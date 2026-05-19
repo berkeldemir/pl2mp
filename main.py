@@ -30,16 +30,15 @@ GITHUB_USER = "berkeldemir"
 GITHUB_REPO = "pl2mp"
 
 def check_and_update():
+    # Arkadaşının bilgisayarında kodların durduğu klasör
     if getattr(sys, 'frozen', False):
-        # Mac'te paketlenen uygulamanın ana dizinini bulur
         current_dir = os.path.dirname(sys.executable)
-        # Genelde 'main.app/Contents/MacOS/main' yolundadır. 
-        # Güncelleyeceğimiz en üst klasör olan 'main.app' dizininin dışını hedefleriz
-        app_bundle_path = os.path.abspath(os.path.join(current_dir, "..", "..", ".."))
-        parent_dir = os.path.dirname(app_bundle_path)
+        # PyInstaller klasör yapısında kaynak kodların çalıştığı yer
+        base_dir = os.path.abspath(os.path.join(current_dir, "..", "Resources"))
     else:
         return
 
+    # Sürüm kontrolünü yine GitHub API'den hafif bir text olarak yapıyoruz
     url = f"https://api.github.com/repos/{GITHUB_USER}/{GITHUB_REPO}/releases/latest"
     
     try:
@@ -49,26 +48,24 @@ def check_and_update():
             latest_version = data["tag_name"].replace("v", "")
             
             if latest_version > VERSION:
-                download_url = data["assets"][0]["browser_download_url"]
+                # GitHub'daki ana branch'indeki (main/master) güncel kodların ham (raw) linkleri
+                raw_base_url = f"https://raw.githubusercontent.com/{GITHUB_USER}/{GITHUB_REPO}/main"
                 
-                # macOS için arka planda çalışacak shell script (.sh)
-                updater_script = f"""#!/bin/bash
-sleep 3
-curl -L -o "{parent_dir}/update.zip" "{download_url}"
-unzip -o "{parent_dir}/update.zip" -d "{parent_dir}"
-rm "{parent_dir}/update.zip"
-open "{app_bundle_path}"
-"""
-                updater_path = os.path.join(parent_dir, "updater.sh")
-                with open(updater_path, "w", encoding="utf-8") as f:
-                    f.write(updater_script)
+                # Güncellenecek dosyaların listesi (Yeni dosya eklersen buraya yazman yeterli)
+                files_to_update = ["main.py", "style.py"]
                 
-                # Çalıştırılma izni ver ve arka planda tetikle
-                os.chmod(updater_path, 0o755)
-                subprocess.Popen(["/bin/bash", updater_path], start_new_session=True)
+                for file_name in files_to_update:
+                    file_url = f"{raw_base_url}/{file_name}"
+                    file_response = requests.get(file_url, timeout=5)
+                    if file_response.status_code == 200:
+                        # Eski kod dosyasının üzerine yenisini yazıyoruz
+                        with open(os.path.join(base_dir, file_name), "w", encoding="utf-8") as f:
+                            f.write(file_response.text)
+                
+                print("Uygulama başarıyla güncellendi. Lütfen yeniden başlatın.")
                 sys.exit(0)
     except Exception as e:
-        print(f"Güncelleme kontrolü atlandı: {e}")
+        print(f"Güncelleme atlandı: {e}")
 
 # --- MİNİMALİST DAİRESEL (PIE) WIDGET ---
 class CircularProgress(QWidget):
