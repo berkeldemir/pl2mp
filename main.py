@@ -25,7 +25,7 @@ ICON_BACK = os.path.join(ASSETS_DIR, "back.png")
 ICON_BROWSE = os.path.join(ASSETS_DIR, "browse.png")
 ICON_ADD = os.path.join(ASSETS_DIR, "add.png")
 
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 GITHUB_USER = "berkeldemir"
 GITHUB_REPO = "pl2mp"
 
